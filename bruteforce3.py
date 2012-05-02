@@ -9,6 +9,7 @@ import marshal
 from binascii import a2b_base64
 import tempfile
 import os
+import zlib
 
 def evaluate_layers_rests(layers, rests, scores, pallet):
     rest_layers = list()
@@ -27,6 +28,8 @@ def evaluate_layers_rests(layers, rests, scores, pallet):
 
         diff_x, diff_y = plength*0.5-com_x, pwidth*0.5-com_y
 
+        #TODO: for long/wide layers the center of mass might delta might
+        #      create an overhang over one side of the pallet
         for article in layer:
             article['PlacePosition']['X'] += diff_x
             article['PlacePosition']['Y'] += diff_y
@@ -57,16 +60,16 @@ def evaluate_layers_rests(layers, rests, scores, pallet):
         score = float(subprocess.check_output("../palletandtruckviewer-3.0/palletViewer -o "
             +sys.argv[1]+" -p "+tmp
             +" -s ../icra2011TestFiles/scoreAsPlannedConfig1.xml --headless | grep Score", shell=True).split(' ')[1].strip())
-        scores.append(score)
         if score > max(scores+[0]):
             shutil.move(tmp, sys.argv[2])
         else:
             os.remove(tmp)
+        scores.append(score)
 
 def main():
     scores = list()
     for arg in sys.argv[3:]:
-        layers, rests, pallet = cPickle.loads(a2b_base64(arg))
+        layers, rests, pallet = cPickle.loads(zlib.decompress(a2b_base64(arg)))
         evaluate_layers_rests(layers, rests, scores, pallet)
 
     print max(scores)
