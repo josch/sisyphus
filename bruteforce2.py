@@ -74,12 +74,14 @@ def main():
 
     stuff1 = list()
 
-    for order in itertools.product([0,1,2,3], repeat=8):
+    #for order in itertools.product([True, False], repeat=10):
     #for order in [[True]*12,]:
+    for order in itertools.product([0,1,2,3], repeat=8):
         rests = list()
         layers = list()
 
         it = get_layers(bins, pallet, get_bit(order[0], 0), get_bit(order[0], 1))
+        #it = get_layers(bins, pallet, order[0], False)
         layer, rest = it.next()
         if layer:
             layers.append(layer)
@@ -90,6 +92,7 @@ def main():
         for rot_article in order[1:]:
             try:
                 layer, rest = it.send((get_bit(rot_article,0), get_bit(rot_article,1)))
+                #layer, rest = it.send((rot_article, False))
                 if layer:
                     layers.append(layer)
                 if rest:

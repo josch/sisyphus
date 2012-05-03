@@ -10,6 +10,7 @@ from binascii import a2b_base64
 import tempfile
 import os
 import zlib
+import fcntl
 
 def evaluate_layers_rests(layers, rests, scores, pallet):
     rest_layers = list()
@@ -65,6 +66,23 @@ def evaluate_layers_rests(layers, rests, scores, pallet):
         else:
             os.remove(tmp)
         scores.append(score)
+
+        """
+        lock = open("score_max.lock", "w")
+        fcntl.lockf(lock, fcntl.LOCK_EX)
+        score_max_f = open("score_max", "w+")
+        score_max = score_max_f.read()
+        if not score_max:
+            score_max = 0.0
+        if score > score_max:
+            shutil.move(tmp, sys.argv[2])
+            score_max_f.write(str(score))
+        else:
+            os.remove(tmp)
+        score_max_f.close()
+        lock.close()
+        scores.append(score)
+        """
 
 def main():
     scores = list()
