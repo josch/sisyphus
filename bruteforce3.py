@@ -1,18 +1,16 @@
 import sys
 import subprocess
 import itertools
-import shutil
-from util import xmlfiletodict, dicttoxmlfile, get_pallet, get_articles, get_packlist_dict
-from arrange_spread2 import arrange_in_layer, spread_articles, find_articles
+from util import dicttoxmlfile, get_packlist_dict, dicttoxmlstring
+from arrange_spread2 import arrange_in_layer
 import cPickle
-import marshal
 from binascii import a2b_base64
 import tempfile
 import os
 import zlib
 import fcntl
 
-def evaluate_layers_rests(layers, rests, scores, pallet):
+def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
     rest_layers = list()
     # sort rests by space they cover and move them to the center of the pile
     # append them to the layer list
@@ -58,37 +56,24 @@ def evaluate_layers_rests(layers, rests, scores, pallet):
         dicttoxmlfile(packlist, tmp)
 
         # ugly, ugly, ugly, ugly hack - dont copy this...
-        score = float(subprocess.check_output("../palletandtruckviewer-3.0/palletViewer -o "
+        score = float(subprocess.check_output(sys.argv[3]+" -o "
             +sys.argv[1]+" -p "+tmp
-            +" -s ../icra2011TestFiles/scoreAsPlannedConfig1.xml --headless | grep Score", shell=True).split(' ')[1].strip())
-        if score > max(scores+[0]):
-            shutil.move(tmp, sys.argv[2])
-        else:
-            os.remove(tmp)
+            +" -s "+sys.argv[4]+" --headless | grep Score", shell=True).split(' ')[1].strip())
+        if score >= max(scores+[0]):
+            result_max[0] = dicttoxmlstring(packlist)
+        os.remove(tmp)
         scores.append(score)
-
-        """
-        lock = open("score_max.lock", "w")
-        fcntl.lockf(lock, fcntl.LOCK_EX)
-        score_max_f = open("score_max", "w+")
-        score_max = score_max_f.read()
-        if not score_max:
-            score_max = 0.0
-        if score > score_max:
-            shutil.move(tmp, sys.argv[2])
-            score_max_f.write(str(score))
-        else:
-            os.remove(tmp)
-        score_max_f.close()
-        lock.close()
-        scores.append(score)
-        """
 
 def main():
+    if len(sys.argv) < 6:
+        print "usage:", sys.argv[0], "order.xml packlist.xml palletViewer scoring.xml LAYER [LAYER..]"
+        exit(1)
+
     scores = list()
-    for arg in sys.argv[3:]:
+    result_max = [None]
+    for arg in sys.argv[5:]:
         layers, rests, pallet = cPickle.loads(zlib.decompress(a2b_base64(arg)))
-        evaluate_layers_rests(layers, rests, scores, pallet)
+        evaluate_layers_rests(layers, rests, scores, pallet, result_max)
 
     print max(scores)
     #print "max:", max(scores)
@@ -97,6 +82,20 @@ def main():
     #print "mean:", mean
     #from math import sqrt
     #print "stddev:", sqrt(sum([(x-mean)**2 for x in scores])/len(scores))
+
+    lock = open("score_max.lock", "w")
+    fcntl.lockf(lock, fcntl.LOCK_EX)
+    if os.path.isfile("score_max"):
+        with open("score_max", "r") as f:
+            score_max = float(f.read())
+    else:
+        score_max = 0.0
+    if max(scores) > score_max:
+        with open(sys.argv[2], "w+") as f:
+            f.write(result_max[0])
+        with open("score_max", "w+") as f:
+            f.write(str(max(scores)))
+    lock.close()
 
 if __name__ == "__main__":
     main()

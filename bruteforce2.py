@@ -1,9 +1,7 @@
 import sys
-import subprocess
 import itertools
-import shutil
-from util import xmlfiletodict, dicttoxmlfile, get_pallet, get_articles, get_packlist_dict
-from arrange_spread2 import arrange_in_layer, spread_articles, find_articles
+from util import xmlfiletodict, get_pallet, get_articles
+from arrange_spread2 import arrange_in_layer, spread_articles
 import cPickle
 from binascii import b2a_base64
 import zlib
@@ -54,8 +52,8 @@ def get_bit(num, pos):
     return num>>pos&1
 
 def main():
-    if len(sys.argv) != 3:
-        print "usage:", sys.argv[0], "order.xml packlist.xml"
+    if len(sys.argv) != 2:
+        print "usage:", sys.argv[0], "order.xml"
         exit(1)
 
     orderline = xmlfiletodict(sys.argv[1])
@@ -74,14 +72,20 @@ def main():
 
     stuff1 = list()
 
-    #for order in itertools.product([True, False], repeat=10):
-    #for order in [[True]*12,]:
-    for order in itertools.product([0,1,2,3], repeat=8):
+    rot_pallet_only = False
+    if rot_pallet_only:
+        combos = [True, False]
+    else:
+        combos = [0,1,2,3]
+
+    for order in itertools.product(combos, repeat=5):
         rests = list()
         layers = list()
 
-        it = get_layers(bins, pallet, get_bit(order[0], 0), get_bit(order[0], 1))
-        #it = get_layers(bins, pallet, order[0], False)
+        if rot_pallet_only:
+            it = get_layers(bins, pallet, False, order[0])
+        else:
+            it = get_layers(bins, pallet, get_bit(order[0], 0), get_bit(order[0], 1))
         layer, rest = it.next()
         if layer:
             layers.append(layer)
@@ -91,8 +95,10 @@ def main():
         fail = True
         for rot_article in order[1:]:
             try:
-                layer, rest = it.send((get_bit(rot_article,0), get_bit(rot_article,1)))
-                #layer, rest = it.send((rot_article, False))
+                if rot_pallet_only:
+                    layer, rest = it.send((False, rot_article))
+                else:
+                    layer, rest = it.send((get_bit(rot_article,0), get_bit(rot_article,1)))
                 if layer:
                     layers.append(layer)
                 if rest:
