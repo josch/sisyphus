@@ -117,7 +117,38 @@ def get_packlist_dict(pallet, articles):
                }
     }
 
+def product_varlength(branch_factor):
+    root = {"value": None, "parent": None, "children": []}
+    current = root
+    while True:
+        if not current["children"]:
+            current["children"] = [{"value":val, "parent":current, "children":[]}
+                                    for val in range(branch_factor)]
+        current = current["children"][0]
+        if (yield current["value"]):
+            while True:
+                if current["parent"]:
+                    current["parent"]["children"].pop(0)
+                else:
+                    return
+                if current["parent"]["children"]:
+                    current = root
+                    break
+                else:
+                    current = current["parent"]
+
+
 if __name__ == "__main__":
+    it = product_var_repeat(3)
+    while True:
+        try:
+            foo = it.send(True) # start a new combination
+        except TypeError:
+            foo = it.next() # can't send to a just-started generator
+        except StopIteration:
+            break # generator empty
+        print foo, it.send(False), it.send(False)
+
     tree = ElementTree.parse('../icra2011TestFiles/GT/gt_d1r1.wpacklist.xml')
     #tree = ElementTree.parse('../icra2011TestFiles/palDay1R1Order.xml')
     root = tree.getroot()

@@ -1,6 +1,6 @@
 import sys
 import itertools
-from util import xmlfiletodict, get_pallet, get_articles
+from util import xmlfiletodict, get_pallet, get_articles, product_varlength
 from arrange_spread2 import arrange_in_layer, spread_articles
 import cPickle
 from binascii import b2a_base64
@@ -51,6 +51,9 @@ def get_layers(bins, pallet, rot_article=False, rot_pallet=False):
 def get_bit(num, pos):
     return num>>pos&1
 
+def get_bitmask(num, length):
+    return tuple(( bool(num>>pos&1) for pos in xrange(length-1,-1,-1) ))
+
 def main():
     if len(sys.argv) != 2:
         print "usage:", sys.argv[0], "order.xml"
@@ -68,46 +71,32 @@ def main():
         else:
             bins[article['Article']['Height']] = [article]
 
-    scores = list()
-
-    stuff1 = list()
-
-    rot_pallet_only = False
-    if rot_pallet_only:
-        combos = [True, False]
-    else:
-        combos = [0,1,2,3]
-
-    for order in itertools.product(combos, repeat=5):
+    product_it = product_varlength(4)
+    while True:
         rests = list()
         layers = list()
-
-        if rot_pallet_only:
-            it = get_layers(bins, pallet, False, order[0])
-        else:
-            it = get_layers(bins, pallet, get_bit(order[0], 0), get_bit(order[0], 1))
+        try:
+            rot_article, rot_pallet = get_bitmask(product_it.send(True), 2) # start a new combination
+        except TypeError:
+            rot_article, rot_pallet = get_bitmask(product_it.next(), 2) # can't send to a just-started generator
+        except StopIteration:
+            break # generator empty
+        it = get_layers(bins, pallet, rot_article, rot_pallet)
         layer, rest = it.next()
         if layer:
             layers.append(layer)
         if rest:
             rests.append(rest)
 
-        fail = True
-        for rot_article in order[1:]:
+        while True:
             try:
-                if rot_pallet_only:
-                    layer, rest = it.send((False, rot_article))
-                else:
-                    layer, rest = it.send((get_bit(rot_article,0), get_bit(rot_article,1)))
+                layer, rest = it.send(get_bitmask(product_it.send(False), 2))
                 if layer:
                     layers.append(layer)
                 if rest:
                     rests.append(rest)
             except StopIteration:
-                fail = False
                 break
-        if fail:
-            raise Exception("finished early")
         print b2a_base64(zlib.compress(cPickle.dumps((layers, rests, pallet)))),
 if __name__ == "__main__":
     main()
