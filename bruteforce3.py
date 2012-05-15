@@ -15,9 +15,14 @@ libpallet = ctypes.cdll.LoadLibrary('./libpallet.so.0.0.0')
 libpallet.evaluate.restype = ctypes.c_double
 
 if os.environ.get("multi_pallet"):
-    multi_pallet = os.environ["multi_pallet"]
+    try_multi_pallet = bool(int(os.environ["multi_pallet"]))
 else:
-    multi_pallet = False
+    try_multi_pallet = False
+
+if os.environ.get("permutations"):
+    try_permutations = bool(int(os.environ["permutations"]))
+else:
+    try_permutations = True
 
 def pack_single_pallet(permut_layers, rest_layers, pallet):
     pack_sequence = 1
@@ -76,8 +81,12 @@ def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
 
         rest_layers.append(layer)
 
-    for permut_layers in itertools.permutations(layers):
-        if multi_pallet:
+    if try_permutations:
+        permutations = itertools.permutations(layers)
+    else:
+        permutations = [layers]
+    for permut_layers in permutations:
+        if try_multi_pallet:
             packlist = pack_multi_pallet(permut_layers, rest_layers, pallet)
         else:
             packlist = pack_single_pallet(permut_layers, rest_layers, pallet)
@@ -86,7 +95,7 @@ def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
         #score = float(subprocess.check_output(sys.argv[3]+" -o "
         #    +sys.argv[1]+" -p "+tmp
         #    +" -s "+sys.argv[4]+" --headless | grep Score", shell=True).split(' ')[1].strip())
-        if multi_pallet:
+        if try_multi_pallet:
             score = evaluate_multi_pallet(packlist)
         else:
             score = evaluate_single_pallet(packlist)
