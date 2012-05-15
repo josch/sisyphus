@@ -51,7 +51,7 @@ def evaluate_single_pallet(packlist):
 def evaluate_multi_pallet(packlist):
     pass
 
-def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
+def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
     rest_layers = list()
     # sort rests by space they cover and move them to the center of the pile
     # append them to the layer list
@@ -90,41 +90,35 @@ def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
             score = evaluate_multi_pallet(packlist)
         else:
             score = evaluate_single_pallet(packlist)
-        if score >= max(scores+[0]):
+        if score >= score_max[0]:
             result_max[0] = dicttoxmlstring(packlist)
-        scores.append(score)
+            score_max[0] = score
 
 def main():
     if len(sys.argv) < 5:
         print "usage:", sys.argv[0], "order.xml packlist.xml scoring.xml LAYER [LAYER..]"
         exit(1)
 
-    scores = list()
+    score_max = [0]
     result_max = [None]
     for arg in sys.argv[4:]:
         layers, rests, pallet = cPickle.loads(zlib.decompress(a2b_base64(arg)))
-        evaluate_layers_rests(layers, rests, scores, pallet, result_max)
+        evaluate_layers_rests(layers, rests, score_max, pallet, result_max)
 
-    print max(scores)
-    #print "max:", max(scores)
-    #print "min:", min(scores)
-    #mean = sum(scores)/len(scores)
-    #print "mean:", mean
-    #from math import sqrt
-    #print "stddev:", sqrt(sum([(x-mean)**2 for x in scores])/len(scores))
+    print score_max[0]
 
     lock = open("score_max.lock", "w")
     fcntl.lockf(lock, fcntl.LOCK_EX)
     if os.path.isfile("score_max"):
         with open("score_max", "r") as f:
-            score_max = float(f.read())
+            score_max_f = float(f.read())
     else:
-        score_max = 0.0
-    if max(scores) > score_max:
+        score_max_f = 0.0
+    if score_max[0] > score_max_f:
         with open(sys.argv[2], "w+") as f:
             f.write(result_max[0])
         with open("score_max", "w+") as f:
-            f.write(str(max(scores)))
+            f.write(str(score_max[0]))
     lock.close()
 
 if __name__ == "__main__":
