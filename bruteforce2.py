@@ -82,6 +82,16 @@ def main():
     else:
         try_rot_pallet = True
 
+    if os.environ.get("rot_article_default"):
+        rot_article_default = bool(int(os.environ["rot_article_default"]))
+    else:
+        rot_article_default = False
+
+    if os.environ.get("rot_pallet_default"):
+        rot_pallet_default = bool(int(os.environ["rot_pallet_default"]))
+    else:
+        rot_pallet_default = False
+
     if try_rot_article and try_rot_pallet:
         product_it = product_varlength(4)
     elif try_rot_article or try_rot_pallet:
@@ -94,25 +104,25 @@ def main():
                 rot_article, rot_pallet = get_bitmask(product_it.send(True), 2)
             elif try_rot_article and not try_rot_pallet:
                 rot_article = get_bitmask(product_it.send(True), 1)[0]
-                rot_pallet = False
+                rot_pallet = rot_pallet_default
             elif not try_rot_article and try_rot_pallet:
-                rot_article = False
+                rot_article = rot_article_default
                 rot_pallet = get_bitmask(product_it.send(True), 1)[0]
             else:
-                rot_article = False
-                rot_pallet = False
+                rot_article = rot_article_default
+                rot_pallet = rot_pallet_default
         except TypeError:
             if try_rot_article and try_rot_pallet:
                 rot_article, rot_pallet = get_bitmask(product_it.next(), 2)
             elif try_rot_article and not try_rot_pallet:
                 rot_article = get_bitmask(product_it.next(), 1)[0]
-                rot_pallet = False
+                rot_pallet = rot_pallet_default
             elif not try_rot_article and try_rot_pallet:
-                rot_article = False
+                rot_article = rot_article_default
                 rot_pallet = get_bitmask(product_it.next(), 1)[0]
             else:
-                rot_article = False
-                rot_pallet = False
+                rot_article = rot_article_default
+                rot_pallet = rot_pallet_default
         except StopIteration:
             break # generator empty
         it = get_layers(bins, pallet, rot_article, rot_pallet)
@@ -127,11 +137,11 @@ def main():
                 if try_rot_article and try_rot_pallet:
                     layer, rest = it.send(get_bitmask(product_it.send(False), 2))
                 elif try_rot_article and not try_rot_pallet:
-                    layer, rest = it.send((get_bitmask(product_it.send(False), 1)[0], False))
+                    layer, rest = it.send((get_bitmask(product_it.send(False), 1)[0], rot_pallet_default))
                 elif not try_rot_article and try_rot_pallet:
-                    layer, rest = it.send((False, get_bitmask(product_it.send(False), 1)[0]))
+                    layer, rest = it.send((rot_article_default, get_bitmask(product_it.send(False), 1)[0]))
                 else:
-                    layer, rest = it.send((False, False))
+                    layer, rest = it.send((rot_article_default, rot_pallet_default))
                 if layer:
                     layers.append(layer)
                 if rest:
