@@ -56,7 +56,7 @@ def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
 
         packlist = get_packlist_dict(pallet, articles_to_pack)
 
-        _, tmp = tempfile.mkstemp()
+        tmp_fh, tmp = tempfile.mkstemp()
         dicttoxmlfile(packlist, tmp)
 
         # ugly, ugly, ugly, ugly hack - dont copy this...
@@ -66,6 +66,7 @@ def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
         score = libpallet.evaluate(sys.argv[1], tmp, sys.argv[3])
         if score >= max(scores+[0]):
             result_max[0] = dicttoxmlstring(packlist)
+        os.close(tmp_fh)
         os.remove(tmp)
         scores.append(score)
 
