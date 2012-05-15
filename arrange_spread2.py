@@ -1,4 +1,3 @@
-import svg
 import random
 
 # rounds to the next biggest even number
@@ -294,6 +293,7 @@ def sanity_check(layer):
 
 # draw layer of articles
 def draw_layer(filename, layer):
+    import svg
     scene = svg.Scene(filename, (pwidth, pheight))
     for a in layer:
         scene.add(svg.Rectangle((a['x'], a['y']),(a['width'], a['height']),a['color']))
