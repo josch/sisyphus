@@ -9,6 +9,10 @@ import tempfile
 import os
 import zlib
 import fcntl
+import ctypes
+
+libpallet = ctypes.cdll.LoadLibrary('./libpallet.so.0.0.0')
+libpallet.evaluate.restype = ctypes.c_double
 
 def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
     rest_layers = list()
@@ -56,22 +60,23 @@ def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
         dicttoxmlfile(packlist, tmp)
 
         # ugly, ugly, ugly, ugly hack - dont copy this...
-        score = float(subprocess.check_output(sys.argv[3]+" -o "
-            +sys.argv[1]+" -p "+tmp
-            +" -s "+sys.argv[4]+" --headless | grep Score", shell=True).split(' ')[1].strip())
+        #score = float(subprocess.check_output(sys.argv[3]+" -o "
+        #    +sys.argv[1]+" -p "+tmp
+        #    +" -s "+sys.argv[4]+" --headless | grep Score", shell=True).split(' ')[1].strip())
+        score = libpallet.evaluate(sys.argv[1], tmp, sys.argv[3])
         if score >= max(scores+[0]):
             result_max[0] = dicttoxmlstring(packlist)
         os.remove(tmp)
         scores.append(score)
 
 def main():
-    if len(sys.argv) < 6:
-        print "usage:", sys.argv[0], "order.xml packlist.xml palletViewer scoring.xml LAYER [LAYER..]"
+    if len(sys.argv) < 5:
+        print "usage:", sys.argv[0], "order.xml packlist.xml scoring.xml LAYER [LAYER..]"
         exit(1)
 
     scores = list()
     result_max = [None]
-    for arg in sys.argv[5:]:
+    for arg in sys.argv[4:]:
         layers, rests, pallet = cPickle.loads(zlib.decompress(a2b_base64(arg)))
         evaluate_layers_rests(layers, rests, scores, pallet, result_max)
 

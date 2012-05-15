@@ -126,6 +126,8 @@ def product_varlength(branch_factor):
                                     for val in range(branch_factor)]
         current = current["children"][0]
         if (yield current["value"]):
+            current["parent"]["children"] = [] # only for the icra 2012
+            current = current["parent"]        # bruteforce implementation
             while True:
                 if current["parent"]:
                     current["parent"]["children"].pop(0)
