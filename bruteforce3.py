@@ -14,6 +14,43 @@ import ctypes
 libpallet = ctypes.cdll.LoadLibrary('./libpallet.so.0.0.0')
 libpallet.evaluate.restype = ctypes.c_double
 
+if os.environ.get("multi_pallet"):
+    multi_pallet = os.environ["multi_pallet"]
+else:
+    multi_pallet = False
+
+def pack_single_pallet(permut_layers, rest_layers, pallet):
+    pack_sequence = 1
+    pack_height = 0
+
+    articles_to_pack = list()
+
+    for layer in list(permut_layers)+rest_layers:
+        pack_height += layer[0]['Article']['Height']
+        #if pack_height > pallet['Dimensions']['MaxLoadHeight']:
+        #    break
+        for article in layer:
+            article['PackSequence'] = pack_sequence
+            article['PlacePosition']['Z'] = pack_height
+            articles_to_pack.append(article)
+            pack_sequence += 1
+
+    return get_packlist_dict(pallet, articles_to_pack)
+
+def pack_multi_pallet(permut_layers, rest_layers, pallet):
+    pass
+
+def evaluate_single_pallet(packlist):
+    tmp_fh, tmp = tempfile.mkstemp()
+    dicttoxmlfile(packlist, tmp)
+    result = libpallet.evaluate(sys.argv[1], tmp, sys.argv[3])
+    os.close(tmp_fh)
+    os.remove(tmp)
+    return result
+
+def evaluate_multi_pallet(packlist):
+    pass
+
 def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
     rest_layers = list()
     # sort rests by space they cover and move them to the center of the pile
@@ -40,34 +77,21 @@ def evaluate_layers_rests(layers, rests, scores, pallet, result_max):
         rest_layers.append(layer)
 
     for permut_layers in itertools.permutations(layers):
-        pack_sequence = 1
-        pack_height = 0
-        articles_to_pack = list()
-
-        for layer in list(permut_layers)+rest_layers:
-            pack_height += layer[0]['Article']['Height']
-            #if pack_height > pallet['Dimensions']['MaxLoadHeight']:
-            #    break
-            for article in layer:
-                article['PackSequence'] = pack_sequence
-                article['PlacePosition']['Z'] = pack_height
-                articles_to_pack.append(article)
-                pack_sequence += 1
-
-        packlist = get_packlist_dict(pallet, articles_to_pack)
-
-        tmp_fh, tmp = tempfile.mkstemp()
-        dicttoxmlfile(packlist, tmp)
+        if multi_pallet:
+            packlist = pack_multi_pallet(permut_layers, rest_layers, pallet)
+        else:
+            packlist = pack_single_pallet(permut_layers, rest_layers, pallet)
 
         # ugly, ugly, ugly, ugly hack - dont copy this...
         #score = float(subprocess.check_output(sys.argv[3]+" -o "
         #    +sys.argv[1]+" -p "+tmp
         #    +" -s "+sys.argv[4]+" --headless | grep Score", shell=True).split(' ')[1].strip())
-        score = libpallet.evaluate(sys.argv[1], tmp, sys.argv[3])
+        if multi_pallet:
+            score = evaluate_multi_pallet(packlist)
+        else:
+            score = evaluate_single_pallet(packlist)
         if score >= max(scores+[0]):
             result_max[0] = dicttoxmlstring(packlist)
-        os.close(tmp_fh)
-        os.remove(tmp)
         scores.append(score)
 
 def main():
