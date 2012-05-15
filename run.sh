@@ -7,7 +7,7 @@ fi
 
 rm -f score_max
 
-python bruteforce2.py $1 | xargs --max-procs=4 python bruteforce3.py $1 $2 $3
+python bruteforce2.py $1 | sort -r | xargs --max-procs=4 --max-args=4 python bruteforce3.py $1 $2 $3
 
 echo palletViewer -o $1 -p $2 -s $3
 
