@@ -83,7 +83,11 @@ def get_pallet(orderline):
 def get_articles(orderline):
     articles = list()
     for o in orderline['Message']['Order']['OrderLines']['OrderLine']:
-        for barcode in o['Barcodes']['Barcode']:
+        if isinstance(o['Barcodes']['Barcode'], basestring):
+            barcodes = [o['Barcodes']['Barcode']]
+        else:
+            barcodes = o['Barcodes']['Barcode']
+        for barcode in barcodes:
             articles.append(
                 {'ApproachPoint1': {'X': 0, 'Y': 0, 'Z': 0},
                  'ApproachPoint2': {'X': 0, 'Y': 0, 'Z': 0},
