@@ -110,6 +110,37 @@ def get_articles(orderline):
             )
     return articles
 
+def get_order_dict(pallet, articles):
+    # create order file from article list
+    # ignore article grouping into orderlines and have one orderline per article
+    orderlines = list()
+
+    for i, article in enumerate(articles):
+        orderlines.append({
+            'OrderLineNo': str(i),
+            'Article': article['Article'],
+            'Barcodes': { 'Barcode': article['Barcode'] }
+        })
+
+    return {'Message':
+               {'PalletInit': {'Pallets': {'Pallet': {
+                   'PalletNumber': int(pallet['PalletNumber']),
+                   'Description': pallet['Description'],
+                   'Dimensions': {
+                       'MaxLoadHeight': int(pallet['Dimensions']['MaxLoadHeight']),
+                       'MaxLoadWeight': int(pallet['Dimensions']['MaxLoadWeight']),
+                       'Length': int(pallet['Dimensions']['Length']),
+                       'Width': int(pallet['Dimensions']['Width'])
+                   } } } },
+                'Order':
+                   {'ID': '1',
+                    'Description': 'foobar',
+                    'Restrictions': { 'FamilyGrouping': 'False', 'Ranking': 'False' },
+                    'Orderlines': { 'OrderLine': orderlines }
+                   }
+               }
+           }
+
 def get_packlist_dict(pallet, articles):
     pallet['Packages'] = {'Package': articles}
     return {'Response':
@@ -120,6 +151,31 @@ def get_packlist_dict(pallet, articles):
                    }
                }
     }
+
+def get_packlist_dict_multi(pallet, article_lists):
+    pallets = []
+
+    for articles in article_lists:
+        pallets.append({
+            'PalletNumber': int(pallet['PalletNumber']),
+            'Description': pallet['Description'],
+            'Dimensions': {
+                'MaxLoadHeight': int(pallet['Dimensions']['MaxLoadHeight']),
+                'MaxLoadWeight': int(pallet['Dimensions']['MaxLoadWeight']),
+                'Length': int(pallet['Dimensions']['Length']),
+                'Width': int(pallet['Dimensions']['Width'])
+            },
+            'Packages': {'Package': articles}
+        })
+
+    return {'Response':
+               {'PackList':
+                   {'OrderID': '1',
+                    'PackPallets':
+                        {'PackPallet': pallets }
+                   }
+               }
+           }
 
 def product_varlength(branch_factor):
     root = {"value": None, "parent": None, "children": []}

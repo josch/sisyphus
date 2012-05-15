@@ -1,7 +1,7 @@
 import sys
 import subprocess
 import itertools
-from util import dicttoxmlfile, get_packlist_dict, dicttoxmlstring
+from util import dicttoxmlfile, get_packlist_dict, get_packlist_dict_multi, dicttoxmlstring, get_order_dict
 from arrange_spread2 import arrange_in_layer
 import cPickle
 from binascii import a2b_base64
@@ -43,7 +43,26 @@ def pack_single_pallet(permut_layers, rest_layers, pallet):
     return get_packlist_dict(pallet, articles_to_pack)
 
 def pack_multi_pallet(permut_layers, rest_layers, pallet):
-    pass
+    sum_all_article_height = sum([layer[0]['Article']['Height'] for layer in list(permut_layers)+rest_layers])
+
+    number_of_pallets = int(sum_all_article_height/pallet['Dimensions']['MaxLoadHeight'])+1
+
+    article_lists = [ list() for i in range(number_of_pallets) ]
+    pack_heights = [ 0 for i in range(number_of_pallets) ]
+    pack_sequences = [ 1 for i in range(number_of_pallets) ]
+
+    # spread over pallets in order
+    for layer in list(permut_layers)+rest_layers:
+        # select as current, the pallet with the lowest height
+        current_pallet = pack_heights.index(min(pack_heights))
+        pack_heights[current_pallet] += layer[0]['Article']['Height']
+        for article in layer:
+            article['PackSequence'] = pack_sequences[current_pallet]
+            article['PlacePosition']['Z'] = pack_heights[current_pallet]
+            article_lists[current_pallet].append(article)
+            pack_sequences[current_pallet] += 1
+
+    return get_packlist_dict_multi(pallet, article_lists)
 
 def evaluate_single_pallet(packlist):
     tmp_fh, tmp = tempfile.mkstemp()
@@ -54,7 +73,24 @@ def evaluate_single_pallet(packlist):
     return result
 
 def evaluate_multi_pallet(packlist):
-    pass
+    pallets = packlist['Response']['PackList']['PackPallets']['PackPallet']
+
+    article_lists = [ pallet['Packages']['Package'] for pallet in pallets ]
+
+    scores = list()
+    for pallet, articles_to_pack in zip(pallets, article_lists):
+        partial_packlist = get_packlist_dict(pallet, articles_to_pack)
+        tmp_fh, tmp = tempfile.mkstemp()
+        tmp_order_fh, tmp_order = tempfile.mkstemp()
+        dicttoxmlfile(partial_packlist, tmp)
+        dicttoxmlfile(get_order_dict(pallet, articles_to_pack), tmp_order)
+        scores.append(libpallet.evaluate(tmp_order, tmp, sys.argv[3]))
+        os.close(tmp_fh)
+        os.close(tmp_order_fh)
+        os.remove(tmp)
+        os.remove(tmp_order)
+
+    return sum(scores)/len(scores)
 
 def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
     rest_layers = list()
@@ -84,7 +120,7 @@ def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
     if try_permutations:
         permutations = itertools.permutations(layers)
     else:
-        permutations = [layers]
+        permutations = [tuple(layers)]
     for permut_layers in permutations:
         if try_multi_pallet:
             packlist = pack_multi_pallet(permut_layers, rest_layers, pallet)
