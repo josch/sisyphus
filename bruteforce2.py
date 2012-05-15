@@ -5,6 +5,7 @@ from arrange_spread2 import arrange_in_layer, spread_articles
 import cPickle
 from binascii import b2a_base64
 import zlib
+import os
 
 def rotate(node):
     if node is None:
@@ -71,14 +72,47 @@ def main():
         else:
             bins[article['Article']['Height']] = [article]
 
-    product_it = product_varlength(4)
+    if os.environ.get("rot_article"):
+        try_rot_article = bool(int(os.environ["rot_article"]))
+    else:
+        try_rot_article = True
+
+    if os.environ.get("rot_pallet"):
+        try_rot_pallet = bool(int(os.environ["rot_pallet"]))
+    else:
+        try_rot_pallet = True
+
+    if try_rot_article and try_rot_pallet:
+        product_it = product_varlength(4)
+    elif try_rot_article or try_rot_pallet:
+        product_it = product_varlength(2)
     while True:
         rests = list()
         layers = list()
         try:
-            rot_article, rot_pallet = get_bitmask(product_it.send(True), 2) # start a new combination
+            if try_rot_article and try_rot_pallet:
+                rot_article, rot_pallet = get_bitmask(product_it.send(True), 2)
+            elif try_rot_article and not try_rot_pallet:
+                rot_article = get_bitmask(product_it.send(True), 1)[0]
+                rot_pallet = False
+            elif not try_rot_article and try_rot_pallet:
+                rot_article = False
+                rot_pallet = get_bitmask(product_it.send(True), 1)[0]
+            else:
+                rot_article = False
+                rot_pallet = False
         except TypeError:
-            rot_article, rot_pallet = get_bitmask(product_it.next(), 2) # can't send to a just-started generator
+            if try_rot_article and try_rot_pallet:
+                rot_article, rot_pallet = get_bitmask(product_it.next(), 2)
+            elif try_rot_article and not try_rot_pallet:
+                rot_article = get_bitmask(product_it.next(), 1)[0]
+                rot_pallet = False
+            elif not try_rot_article and try_rot_pallet:
+                rot_article = False
+                rot_pallet = get_bitmask(product_it.next(), 1)[0]
+            else:
+                rot_article = False
+                rot_pallet = False
         except StopIteration:
             break # generator empty
         it = get_layers(bins, pallet, rot_article, rot_pallet)
@@ -90,7 +124,14 @@ def main():
 
         while True:
             try:
-                layer, rest = it.send(get_bitmask(product_it.send(False), 2))
+                if try_rot_article and try_rot_pallet:
+                    layer, rest = it.send(get_bitmask(product_it.send(False), 2))
+                elif try_rot_article and not try_rot_pallet:
+                    layer, rest = it.send((get_bitmask(product_it.send(False), 1)[0], False))
+                elif not try_rot_article and try_rot_pallet:
+                    layer, rest = it.send((False, get_bitmask(product_it.send(False), 1)[0]))
+                else:
+                    layer, rest = it.send((False, False))
                 if layer:
                     layers.append(layer)
                 if rest:
@@ -98,5 +139,7 @@ def main():
             except StopIteration:
                 break
         print b2a_base64(zlib.compress(cPickle.dumps((layers, rests, pallet)))),
+        if not try_rot_article and not try_rot_pallet:
+            break # only one iteration if both are deactivated
 if __name__ == "__main__":
     main()
