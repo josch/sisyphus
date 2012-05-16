@@ -92,10 +92,17 @@ def main():
     else:
         rot_pallet_default = False
 
+    if os.environ.get("iterations"):
+        max_iter = int(os.environ["iterations"])
+    else:
+        max_iter = -1
+
     if try_rot_article and try_rot_pallet:
         product_it = product_varlength(4)
     elif try_rot_article or try_rot_pallet:
         product_it = product_varlength(2)
+
+    i = 0
     while True:
         rests = list()
         layers = list()
@@ -151,5 +158,9 @@ def main():
         print b2a_base64(zlib.compress(cPickle.dumps((layers, rests, pallet)))),
         if not try_rot_article and not try_rot_pallet:
             break # only one iteration if both are deactivated
+        i+=1
+        if max_iter != -1 and i >= max_iter:
+            break
+
 if __name__ == "__main__":
     main()
