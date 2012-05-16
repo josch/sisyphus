@@ -199,6 +199,20 @@ def product_varlength(branch_factor):
                 else:
                     current = current["parent"]
 
+# cannot use itertools.cycle as it doesnt allow to send() to it
+def cycle(iterable):
+    saved = []
+    for element in iterable:
+        yield element
+        saved.append(element)
+    while saved:
+        for element in saved:
+              yield element
+
+# cannot use itertools.starmap as it doesnt allow to send() to it
+def starmap(function, iterable):
+    for args in iterable:
+        yield function(*args)
 
 if __name__ == "__main__":
     it = product_var_repeat(3)

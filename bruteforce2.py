@@ -1,11 +1,12 @@
 import sys
 import itertools
-from util import xmlfiletodict, get_pallet, get_articles, product_varlength
+from util import xmlfiletodict, get_pallet, get_articles, product_varlength, starmap
 from arrange_spread2 import arrange_in_layer, spread_articles
 import cPickle
 from binascii import b2a_base64
 import zlib
 import os
+import random
 
 def rotate(node):
     if node is None:
@@ -97,10 +98,21 @@ def main():
     else:
         max_iter = -1
 
+    if os.environ.get("randomize"):
+        try_random = bool(int(os.environ["randomize"]))
+    else:
+        try_random = False
+
     if try_rot_article and try_rot_pallet:
-        product_it = product_varlength(4)
+        if try_random:
+            product_it = starmap(random.randint, itertools.repeat((0,3)))
+        else:
+            product_it = product_varlength(4)
     elif try_rot_article or try_rot_pallet:
-        product_it = product_varlength(2)
+        if try_random:
+            product_it = starmap(random.randint, itertools.repeat((0,1)))
+        else:
+            product_it = product_varlength(2)
 
     i = 0
     while True:
