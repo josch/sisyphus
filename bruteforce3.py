@@ -102,15 +102,37 @@ def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
 
         com_x = 0
         com_y = 0
+        leftmost = pallet['Dimensions']['Length']
+        rightmost = 0
+        bottommost = pallet['Dimensions']['Width']
+        topmost = 0
         for article in layer:
             com_x += article['PlacePosition']['X']
             com_y += article['PlacePosition']['Y']
+            if article['PlacePosition']['X']-article['Article']['Length']/2 < leftmost:
+                leftmost = article['PlacePosition']['X']-article['Article']['Length']/2
+            if article['PlacePosition']['X']+article['Article']['Length']/2 > rightmost:
+                rightmost = article['PlacePosition']['X']+article['Article']['Length']/2
+            if article['PlacePosition']['Y']-article['Article']['Width']/2 < bottommost:
+                bottommost = article['PlacePosition']['Y']-article['Article']['Width']/2
+            if article['PlacePosition']['Y']+article['Article']['Width']/2 > topmost:
+                topmost = article['PlacePosition']['Y']+article['Article']['Width']/2
         com_x, com_y = com_x/len(layer), com_y/len(layer)
+
+        llength = rightmost - leftmost
+        lwidth = topmost - bottommost
+
+        if com_x < llength-plength/2:
+            com_x = llength-plength/2
+        elif com_x > plength/2:
+            com_x = plength/2
+        if com_y < lwidth-pwidth/2:
+            com_y = lwidth-pwidth/2
+        elif com_y > pwidth/2:
+            com_y = pwidth/2
 
         diff_x, diff_y = plength*0.5-com_x, pwidth*0.5-com_y
 
-        #TODO: for long/wide layers the center of mass might delta might
-        #      create an overhang over one side of the pallet
         for article in layer:
             article['PlacePosition']['X'] += diff_x
             article['PlacePosition']['Y'] += diff_y
