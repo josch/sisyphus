@@ -10,6 +10,7 @@ import os
 import zlib
 import fcntl
 import ctypes
+import random
 
 libpallet = ctypes.cdll.LoadLibrary('./libpallet.so.0.0.0')
 libpallet.evaluate.restype = ctypes.c_double
@@ -24,13 +25,23 @@ if os.environ.get("permutations"):
 else:
     try_permutations = True
 
+if os.environ.get("iterations"):
+    max_iter = int(os.environ["iterations"])
+else:
+    max_iter = -1
+
+if os.environ.get("randomize"):
+    try_random = bool(int(os.environ["randomize"]))
+else:
+    try_random = False
+
 def pack_single_pallet(permut_layers, rest_layers, pallet):
     pack_sequence = 1
     pack_height = 0
 
     articles_to_pack = list()
 
-    for layer in list(permut_layers)+rest_layers:
+    for layer in permut_layers+rest_layers:
         pack_height += layer[0]['Article']['Height']
         #if pack_height > pallet['Dimensions']['MaxLoadHeight']:
         #    break
@@ -43,7 +54,7 @@ def pack_single_pallet(permut_layers, rest_layers, pallet):
     return get_packlist_dict(pallet, articles_to_pack)
 
 def pack_multi_pallet(permut_layers, rest_layers, pallet):
-    sum_all_article_height = sum([layer[0]['Article']['Height'] for layer in list(permut_layers)+rest_layers])
+    sum_all_article_height = sum([layer[0]['Article']['Height'] for layer in permut_layers+rest_layers])
 
     number_of_pallets = int(sum_all_article_height/pallet['Dimensions']['MaxLoadHeight'])+1
 
@@ -52,7 +63,7 @@ def pack_multi_pallet(permut_layers, rest_layers, pallet):
     pack_sequences = [ 1 for i in range(number_of_pallets) ]
 
     # spread over pallets in order
-    for layer in list(permut_layers)+rest_layers:
+    for layer in permut_layers+rest_layers:
         # select as current, the pallet with the lowest height
         current_pallet = pack_heights.index(min(pack_heights))
         pack_heights[current_pallet] += layer[0]['Article']['Height']
@@ -142,24 +153,30 @@ def evaluate_layers_rests(layers, rests, score_max, pallet, result_max):
     if try_permutations:
         permutations = itertools.permutations(layers)
     else:
-        permutations = [tuple(layers)]
+        #permutations = [tuple(sorted(layers, key=lambda layer: sum([article['Article']['Weight'] for article in layer]), reverse=True))]
+        #permutations = [tuple(sorted(layers, key=lambda layer: sum([article['Article']['Length']*article['Article']['Width'] for article in layer]), reverse=True))]
+        #permutations = (layers for i in xrange(1000))
+        permutations = [layers]
+
+    i = 0
     for permut_layers in permutations:
+        permut_layers = list(permut_layers)
+        if try_random:
+            random.shuffle(permut_layers)
         if try_multi_pallet:
             packlist = pack_multi_pallet(permut_layers, rest_layers, pallet)
-        else:
-            packlist = pack_single_pallet(permut_layers, rest_layers, pallet)
-
-        # ugly, ugly, ugly, ugly hack - dont copy this...
-        #score = float(subprocess.check_output(sys.argv[3]+" -o "
-        #    +sys.argv[1]+" -p "+tmp
-        #    +" -s "+sys.argv[4]+" --headless | grep Score", shell=True).split(' ')[1].strip())
-        if try_multi_pallet:
             score = evaluate_multi_pallet(packlist)
         else:
+            packlist = pack_single_pallet(permut_layers, rest_layers, pallet)
             score = evaluate_single_pallet(packlist)
+
         if score >= score_max[0]:
             result_max[0] = dicttoxmlstring(packlist)
             score_max[0] = score
+
+        i+=1
+        if max_iter != -1 and i >= max_iter:
+            break
 
 def main():
     if len(sys.argv) < 5:
