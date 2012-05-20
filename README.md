@@ -1,9 +1,26 @@
+about
+=====
+
+sisyphus is a piece of software I wrote the context of my graduate automation
+project. My class was taking part in the IEEE ICRA 2012 Virtual Manufacturing
+Automation Competition and part of the competition, was to efficiently stack
+boxes of different sizes on a pallet.
+
+As the knapsack problem is NP hard, sisyphus implements hybrid between
+heuristic and bruteforce approach.
+
+The heuristic is, to group articles of same height into layers, and then stack
+those layers on top of each other.
+
+Different techniques to form layers and different orderings of stacking them
+are then tried out in a bruteforce manner.
+
 get the code
 ============
 
 	$ git clone git@github.com:josch/sisyphus.git
 	$ cd sisyphus
-	
+
 
 compile evaluation library
 ==========================
@@ -108,7 +125,7 @@ bruteforce3.py is recommended.
 
 The according line in run.sh could be changed to:
 
-iterations=100 randomize=1 python bruteforce2.py $1 | randomize=1 iterations=1000 xargs --max-procs=4 --max-args=1 python bruteforce3.py $1 $2 $3
+	iterations=100 randomize=1 python bruteforce2.py $1 | randomize=1 iterations=1000 xargs --max-procs=4 --max-args=1 python bruteforce3.py $1 $2 $3
 
 utility scripts
 ===============
@@ -148,16 +165,16 @@ utility scripts
     num_articles_packlist.py
 
         takes a single or multi pallet packlist.xml and prints the number of
-        articles within                                                     
+        articles within
 
     pallets.py
 
         takes an order.xml and prints a table with the length, width, maximum
-        load height and maximum load weight                                  
+        load height and maximum load weight
 
     split_multi.py
 
-	takes a multiple pallet packlist.xml and outputs pairs of single pallet
+        takes a multiple pallet packlist.xml and outputs pairs of single pallet
         packlist.xml and order.xml files by appending _$i.xml and _order_$i.xml
         to the original packlist.xml filename, respectively. The integer $i
         starts at 0 and	will be incremented with each subsequent pallet.
