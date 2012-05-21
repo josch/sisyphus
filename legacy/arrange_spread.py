@@ -17,6 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Sisyphus.  If not, see <http://www.gnu.org/licenses/>.
 
+# inspired by Jake Gordon's bin-packing algorithm
+# https://github.com/jakesgordon/bin-packing/blob/master/js/packer.js
+# http://codeincomplete.com/posts/2011/5/7/bin_packing/
+# Jake Gordon was inspired by Jim Scott's solution on how to pack lightmaps
+# http://www.blackpawn.com/texts/lightmaps/default.html
+
 import svg
 import random
 
