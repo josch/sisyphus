@@ -30,7 +30,7 @@ class Scene:
 
     def svgstr(self):
         svgstr  = "<?xml version=\"1.0\"?>\n"
-        svgstr += "<svg width=\"%d\" height=\"%d\">\n"%self.size
+        svgstr += "<svg width=\"%d\" height=\"%d\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">\n"%self.size
         svgstr += " <g style=\"fill-opacity:1.0; stroke:black; stroke-width:1;\">\n"
         for item in self.items:
             svgstr += item.svgstr()
