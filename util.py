@@ -18,6 +18,7 @@
 # along with Sisyphus.  If not, see <http://www.gnu.org/licenses/>.
 
 from xml.etree import ElementTree
+import operator
 
 def xmltodict(element):
     if not isinstance(element, ElementTree.Element):
@@ -65,12 +66,12 @@ def dicttoxml(element):
             result.append(ElementTree.Element(key))
         else:
             res = ElementTree.Element(key)
-            for k, v in value.items():
+            for k, v in sorted(value.items(), key=operator.itemgetter(0)):
                 dicttoxml_handler(res, k, v)
             result.append(res)
 
     result = ElementTree.Element(element.keys()[0])
-    for key, value in element[element.keys()[0]].items():
+    for key, value in sorted(element[list(element.keys())[0]].items(), key=operator.itemgetter(0)):
         dicttoxml_handler(result, key, value)
     return result
 
